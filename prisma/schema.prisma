@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  address     String
+  clientName  String
+  clientEmail String?
+  clientPhone String?
+  status      ProjectStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  siteNotes  SiteNote[]
+  photos     Photo[]
+  scanFiles  ScanFile[]
+  floorPlans FloorPlan[]
+  renderings Rendering[]
+  estimate   Estimate?
+  proposal   Proposal?
+}
+
+enum ProjectStatus {
+  ACTIVE
+  PROPOSAL_SENT
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+model SiteNote {
+  id        String   @id @default(cuid())
+  projectId String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Photo {
+  id           String   @id @default(cuid())
+  projectId    String
+  filename     String
+  originalName String
+  filePath     String
+  fileSize     Int
+  mimeType     String
+  caption      String?
+  roomLabel    String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ScanFile {
+  id           String           @id @default(cuid())
+  projectId    String
+  filename     String
+  originalName String
+  filePath     String
+  fileSize     Int
+  fileType     ScanFileType
+  source       ScanSource
+  status       ProcessingStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+enum ScanFileType {
+  OBJ
+  GLB
+  USDZ
+  PNG
+  JPG
+  PDF
+  OTHER
+}
+
+enum ScanSource {
+  POLYCAM
+  MAGICPLAN
+  ROOMSCAN
+  OTHER
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETE
+  FAILED
+}
+
+model FloorPlan {
+  id           String          @id @default(cuid())
+  projectId    String
+  name         String          @default("Floor Plan")
+  svgContent   String
+  version      Int             @default(1)
+  isActive     Boolean         @default(true)
+  sourceType   FloorPlanSource
+  sourceScanId String?
+  widthFt      Float?
+  heightFt     Float?
+  scale        Float?
+  metadata     String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  renderings Rendering[]
+}
+
+enum FloorPlanSource {
+  AI_GENERATED
+  MANUAL
+  IMPORTED
+}
+
+model Rendering {
+  id          String           @id @default(cuid())
+  projectId   String
+  floorPlanId String?
+  name        String
+  filePath    String
+  prompt      String
+  style       String
+  roomType    String?
+  materials   String?
+  status      ProcessingStatus @default(PENDING)
+  geminiModel String           @default("gemini-2.0-flash-exp")
+  createdAt   DateTime         @default(now())
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  floorPlan FloorPlan? @relation(fields: [floorPlanId], references: [id])
+}
+
+model Estimate {
+  id             String   @id @default(cuid())
+  projectId      String   @unique
+  totalLabor     Float    @default(0)
+  totalMaterials Float    @default(0)
+  contingency    Float    @default(0.1)
+  markup         Float    @default(0.15)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lineItems EstimateLineItem[]
+}
+
+model EstimateLineItem {
+  id          String           @id @default(cuid())
+  estimateId  String
+  category    EstimateCategory
+  description String
+  unit        String
+  quantity    Float
+  unitCost    Float
+  laborHours  Float            @default(0)
+  laborRate   Float            @default(85)
+  notes       String?
+  sortOrder   Int              @default(0)
+
+  estimate Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+}
+
+enum EstimateCategory {
+  DEMO
+  FRAMING
+  ELECTRICAL
+  PLUMBING
+  HVAC
+  INSULATION
+  DRYWALL
+  FLOORING
+  TILE
+  PAINTING
+  CABINETRY
+  COUNTERTOPS
+  DOORS_WINDOWS
+  FIXTURES
+  APPLIANCES
+  FINISH_CARPENTRY
+  GENERAL
+}
+
+model Proposal {
+  id          String         @id @default(cuid())
+  projectId   String         @unique
+  title       String
+  intro       String?
+  scopeNotes  String?
+  terms       String?
+  validUntil  DateTime?
+  pdfPath     String?
+  status      ProposalStatus @default(DRAFT)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  project  Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sections ProposalSection[]
+}
+
+enum ProposalStatus {
+  DRAFT
+  FINALIZED
+  SENT
+}
+
+model ProposalSection {
+  id         String      @id @default(cuid())
+  proposalId String
+  type       SectionType
+  title      String
+  content    String?
+  sortOrder  Int         @default(0)
+
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+}
+
+enum SectionType {
+  INTRO
+  FLOOR_PLAN
+  RENDERING
+  ESTIMATE
+  TERMS
+  CUSTOM
+}
