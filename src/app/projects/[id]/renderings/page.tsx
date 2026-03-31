@@ -49,8 +49,10 @@ export default function RenderingsPage({ params }: { params: Promise<{ id: strin
       body: JSON.stringify(form),
     });
     if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Generation failed");
+      const text = await res.text();
+      let msg = "Generation failed";
+      try { msg = JSON.parse(text).error || msg; } catch { msg = text || `Server error ${res.status}`; }
+      setError(msg);
     } else {
       const r = await res.json();
       setRenderings(prev => [r, ...prev]);

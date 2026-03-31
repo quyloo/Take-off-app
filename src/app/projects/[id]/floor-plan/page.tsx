@@ -53,8 +53,10 @@ export default function FloorPlanPage({ params }: { params: Promise<{ id: string
       }),
     });
     if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Generation failed");
+      const text = await res.text();
+      let msg = "Generation failed";
+      try { msg = JSON.parse(text).error || msg; } catch { msg = text || `Server error ${res.status}`; }
+      setError(msg);
     } else {
       const plan = await res.json();
       setFloorPlans(prev => [plan, ...prev]);
