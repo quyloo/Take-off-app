@@ -15,7 +15,7 @@ function createPrisma() {
   if (rawUrl.startsWith("file:") && !rawUrl.startsWith("file:///")) {
     const filePath = rawUrl.replace(/^file:/, "");
     const absolutePath = path.resolve(process.cwd(), filePath);
-    libsqlUrl = `file:${absolutePath}`;
+    libsqlUrl = `file://${absolutePath}`; // results in file:///abs/path on Unix/Mac
   }
 
   const libsql = createClient({ url: libsqlUrl });
